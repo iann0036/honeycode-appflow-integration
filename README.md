@@ -14,9 +14,7 @@ First, create your Honeycode account and create an ADMIN user and record credent
 
 [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://us-west-2.console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/quickcreate?templateUrl=https%3A%2F%2Fs3.amazonaws.com%2Fianmckay-us-west-2%2Fhoneycode-appflow%2Ftemplate.yml&stackName=honeycode-appflow)
 
-Click the above link to deploy the stack to your environment.
-
-If you prefer, you can also manually upsert the [template.yml](https://github.com/iann0036/honeycode-appflow-integration/blob/master/template.yml) stack from source.
+Then click the above link to deploy the stack to your environment. If you prefer, you can also manually upsert the [template.yml](https://github.com/iann0036/honeycode-appflow-integration/blob/master/template.yml) stack from source.
 
 You will need to provide the Workbook ID and Sheet ID which can be found in the URL bar, or via the [modal](https://docs.aws.amazon.com/honeycode/latest/UserGuide/arns-and-ids.html).
 
