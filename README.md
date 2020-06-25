@@ -4,8 +4,6 @@ Add Honeycode as a destination from AppFlow.
 
 ![Honeycode Screenshot](assets/screen1.png)
 
-> :exclamation: Only Google Analytics is currently mapped as a valid source
-
 ## Installation
 
 > Currently, the only possible region is `us-west-2`.
@@ -20,4 +18,9 @@ You will need to provide the Workbook ID and Sheet ID which can be found in the 
 
 ![AppFlow Screenshot](assets/screen2.png)
 
-Once launched, the CloudFormation stack will output the name of an S3 bucket it has created. You can now create an AppFlow flow that points from a Google Analytics source, with direct mappings, to this destination bucket and the Honeycode table will be populated each time the flow is run.
+Once launched, the CloudFormation stack will output the name of an S3 bucket it has created. You can now create an AppFlow flow that points from a supported source, with direct mappings, to this destination bucket and the Honeycode table will be populated each time the flow is run.
+
+The following AppFlow sources are currently supported:
+
+* Google Analytics
+* Slack

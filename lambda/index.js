@@ -50,6 +50,42 @@ function getCellsForGoogleAnalytics(s3data) {
     return cells;
 }
 
+function getCellsForSlack(slackmessages) {
+    let cells = [];
+    let row = 0;
+    let column = -1;
+
+    const fields = Object.keys(slackmessages[0]);
+
+    cells = fields.map(value => {
+        column += 1;
+        return {
+            "address": {
+                "column": column,
+                "row": row
+            },
+            "formula": value
+        }
+    });
+
+    for (let slackmessage of slackmessages) {
+        row += 1;
+        column = -1;
+        for (let field of fields) {
+            column += 1;
+            cells.push({
+                "address": {
+                    "column": column,
+                    "row": row
+                },
+                "formula": slackmessage[field] || ""
+            });
+        }
+    }
+
+    return cells;
+}
+
 exports.handler = async (event, context) => {
     LOG.debug(event);
 
@@ -58,8 +94,31 @@ exports.handler = async (event, context) => {
             Bucket: record['s3']['bucket']['name'],
             Key: record['s3']['object']['key']
         }).promise();
+        const s3body = s3obj.Body.toString('utf-8');
         
-        const s3data = JSON.parse(s3obj.Body.toString('utf-8'));
+        let cells = [];
+
+        try {
+            const s3data = JSON.parse(s3body);
+
+            if (s3data['reports']) {
+                cells = getCellsForGoogleAnalytics(s3data);
+            } else {
+                LOG.warn("Invalid data type detected (JSON)");
+                return;
+            }
+        } catch(err) {
+            try {
+                let slackmsgsjson = "[" + s3body.trim().replace(/\n/g, ",") + "]";
+                
+                const slackmessages = JSON.parse(slackmsgsjson);
+                
+                cells = getCellsForSlack(slackmessages);
+            } catch(err) {
+                LOG.warn("Invalid data type detected (non-JSON)");
+                return;
+            }
+        }
         
         const loginReq = await fetch("https://bhauthngateway.us-east-1.honeycode.aws/v2/login", {
             "headers": {
@@ -131,7 +190,7 @@ exports.handler = async (event, context) => {
                 "eventType": "BatchUpdateCell",
                 "sheetArn": "arn:aws:sheets:" + sheetsRegion + ":" + sheetsAccount + ":sheet:" + process.env.WORKBOOK + "/" + process.env.SHEET,
                 "clientToken": uuid.v4(),
-                "cells": getCellsForGoogleAnalytics(s3data)
+                "cells": cells
             }),
             "method": "POST",
             "mode": "cors",
