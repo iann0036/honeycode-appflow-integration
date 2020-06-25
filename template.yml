@@ -1,0 +1,176 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Honeycode AppFlow Integration
+
+Parameters:
+    LoginEmailAddress:
+        Type: String
+        Description: The email address used to log in to Honeycode
+
+    LoginPassword:
+        Type: String
+        Description: The password used to log in to Honeycode
+        NoEcho: true
+
+    Workbook:
+        Type: String
+        Description: The ID of the workbook
+        Default: 11111111-1111-1111-1111-111111111111
+
+    Sheet:
+        Type: String
+        Description: The ID of the sheet
+        Default: 22222222-2222-2222-2222-222222222222
+
+Mappings:
+    RegionMap:
+        us-east-1:
+            bucketname: ianmckay-us-east-1
+        us-east-2:
+            bucketname: ianmckay-us-east-2
+        us-west-1:
+            bucketname: ianmckay-us-west-1
+        us-west-2:
+            bucketname: ianmckay-us-west-2
+        ap-south-1:
+            bucketname: ianmckay-ap-south-1
+        ap-northeast-2:
+            bucketname: ianmckay-ap-northeast-2
+        ap-southeast-1:
+            bucketname: ianmckay-ap-southeast-1
+        ap-southeast-2:
+            bucketname: ianmckay-ap-southeast-2
+        ap-northeast-1:
+            bucketname: ianmckay-ap-northeast-1
+        ca-central-1:
+            bucketname: ianmckay-ca-central-1
+        eu-central-1:
+            bucketname: ianmckay-eu-central-1
+        eu-west-1:
+            bucketname: ianmckay-eu-west-1
+        eu-west-2:
+            bucketname: ianmckay-eu-west-2
+        eu-west-3:
+            bucketname: ianmckay-eu-west-3
+        eu-north-1:
+            bucketname: ianmckay-eu-north-1
+        sa-east-1:
+            bucketname: ianmckay-sa-east-1
+
+Resources:
+
+    Bucket:
+        Type: AWS::S3::Bucket
+        DependsOn:
+          - LambdaS3Permission
+        Properties:
+            BucketName: !Sub
+              - "honeycode-appflow-${UniqueID}"
+              - UniqueID: !Select [ 0, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                  - ServerSideEncryptionByDefault:
+                        SSEAlgorithm: AES256
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+            NotificationConfiguration:
+                LambdaConfigurations:
+                  - Event: s3:ObjectCreated:*
+                    Function: !GetAtt LambdaFunction.Arn
+    
+    LambdaS3Permission:
+        Type: AWS::Lambda::Permission
+        Properties:
+            FunctionName: !Ref LambdaFunction
+            Action: lambda:InvokeFunction
+            Principal: s3.amazonaws.com
+            SourceArn: !Sub
+              - "arn:aws:s3:::honeycode-appflow-${UniqueID}"
+              - UniqueID: !Select [ 0, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+            SourceAccount: !Ref AWS::AccountId
+
+    LambdaLogGroup:
+        Type: AWS::Logs::LogGroup
+        Properties:
+            LogGroupName: /aws/lambda/HoneycodeAppFlowIntegration
+            RetentionInDays: 14
+
+    LambdaEncryptionKey:
+        Type: AWS::KMS::Key
+        Properties:
+            Description: Lambda encryption key for Honeycode AppFlow integration
+            KeyPolicy:
+                Version: '2012-10-17'
+                Id: root
+                Statement:
+                  - Sid: RootPermissions
+                    Effect: Allow
+                    Principal:
+                        AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                    Action: kms:*
+                    Resource: '*'
+
+    LambdaFunction:
+        DependsOn:
+          - LambdaLogGroup
+        Type: AWS::Lambda::Function
+        Properties:
+            FunctionName: HoneycodeAppFlowIntegration
+            Code:
+                S3Bucket:
+                    Fn::FindInMap:
+                      - RegionMap
+                      - !Ref 'AWS::Region'
+                      - bucketname
+                S3Key: 'honeycode-appflow/app.zip'
+            KmsKeyArn: !GetAtt LambdaEncryptionKey.Arn
+            Handler: index.handler
+            Role: !GetAtt LambdaExecutionRole.Arn
+            Environment:
+                Variables:
+                    EMAIL_ADDRESS: !Ref LoginEmailAddress
+                    PASSWORD: !Ref LoginPassword
+                    WORKBOOK: !Ref Workbook
+                    SHEET: !Ref Sheet
+            Runtime: nodejs12.x
+            MemorySize: 256
+            Timeout: 120
+    
+    LambdaExecutionRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: '2012-10-17'
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                        Service:
+                          - lambda.amazonaws.com
+                    Action:
+                      - sts:AssumeRole
+            Path: /
+            Policies:
+              - PolicyName: root
+                PolicyDocument:
+                    Version: '2012-10-17'
+                    Statement:
+                      - Effect: Allow
+                        Action:
+                          - logs:CreateLogGroup
+                          - logs:CreateLogStream
+                          - logs:PutLogEvents
+                        Resource: arn:aws:logs:*:*:*
+                      - Effect: Allow
+                        Action:
+                          - s3:GetObject
+                        Resource: !Sub
+                          - "arn:aws:s3:::honeycode-appflow-${UniqueID}/*"
+                          - UniqueID: !Select [ 0, !Split [ '-', !Select [ 2, !Split [ '/', !Ref 'AWS::StackId' ] ] ] ]
+
+Outputs:
+
+    DestinationBucket:
+        Value: !Ref Bucket
