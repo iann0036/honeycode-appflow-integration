@@ -1,5 +1,7 @@
 # Honeycode AppFlow Integration
 
+> Looking to export data from Honeycode? Check out [honeycode-export](https://github.com/iann0036/honeycode-export).
+
 Add Honeycode as a destination from AppFlow.
 
 ![Honeycode Screenshot](assets/screen1.png)
