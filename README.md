@@ -1,5 +1,7 @@
 # Honeycode AppFlow Integration
 
+# UPDATE December 2020: Honeycode now has [native AppFlow integration](https://aws.amazon.com/about-aws/whats-new/2020/12/amazon-appflow-provides-amazon-honeycode-connectivity-cloud-applications/)
+
 > Looking to export data from Honeycode? Check out [honeycode-export](https://github.com/iann0036/honeycode-export).
 
 Add Honeycode as a destination from AppFlow.
